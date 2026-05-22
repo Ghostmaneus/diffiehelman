@@ -1,7 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { powerMod, isPrime, getPrimitiveRoots } from '../utils/cryptoMath';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+
+// Обширный список стран для автокомплита
+const COUNTRIES = [
+  "Австралия", "Австрия", "Азербайджан", "Аргентина", "Армения", "Беларусь", "Бельгия", "Болгария", "Бразилия", "Великобритания", "Венгрия", "Вьетнам", "Германия", "Греция", "Грузия", "Дания", "Египет", "Израиль", "Индия", "Индонезия", "Ирландия", "Испания", "Италия", "Казахстан", "Канада", "Катар", "Кипр", "Китай", "Кыргызстан", "Латвия", "Литва", "Малайзия", "Мексика", "Молдова", "Монголия", "Нидерланды", "Новая Зеландия", "Норвегия", "ОАЭ", "Польша", "Португалия", "Россия", "Румыния", "Саудовская Аравия", "Сербия", "Сингапур", "Словакия", "Словения", "США", "Таджикистан", "Таиланд", "Туркменистан", "Турция", "Узбекистан", "Украина", "Филиппины", "Финляндия", "Франция", "Хорватия", "Черногория", "Чехия", "Чили", "Швейцария", "Швеция", "Эстония", "Южная Корея", "Япония",
+  "Australia", "Austria", "Azerbaijan", "Argentina", "Armenia", "Belarus", "Belgium", "Bulgaria", "Brazil", "UK", "Hungary", "Vietnam", "Germany", "Greece", "Georgia", "Denmark", "Egypt", "Israel", "India", "Indonesia", "Ireland", "Spain", "Italy", "Kazakhstan", "Canada", "Qatar", "Cyprus", "China", "Kyrgyzstan", "Latvia", "Lithuania", "Malaysia", "Mexico", "Moldova", "Mongolia", "Netherlands", "New Zealand", "Norway", "UAE", "Poland", "Portugal", "Russia", "Romania", "Saudi Arabia", "Serbia", "Singapore", "Slovakia", "Slovenia", "USA", "Tajikistan", "Thailand", "Turkmenistan", "Turkey", "Uzbekistan", "Ukraine", "Philippines", "Finland", "France", "Croatia", "Montenegro", "Czech Republic", "Chile", "Switzerland", "Sweden", "Estonia", "South Korea", "Japan"
+];
 
 const locales = {
   ru: {
@@ -13,13 +19,13 @@ const locales = {
     getCertBtn: "Сразу получить сертификат (Читерская кнопка 🤫)",
     qTitle: "Вопрос", qOf: "из", qRes: "Результат:", qPass: "Отлично! Вы доказали базовые знания.", qFail: "Нужно набрать минимум 8 баллов. Повторите теорию!",
     btnRetry: "Пройти заново", setupTitle: "Настройка сети", modP: "Модуль P", rootG: "Корень G", btnNext: "Далее", errP: "ОШИБКА P",
-    secTitle: "Придумайте секретный ключ", btnMem: "Запомнить", formTitle: "Выберите правильную формулу",
+    secTitle: "Придумайте свой приватный ключ", btnMem: "Запомнить", formTitle: "Выберите правильную формулу",
     subTitle: "Подстановка значений", base: "Основание", exp: "Степень", mod: "Модуль", ans: "Ответ:", res: "Результат",
     btnSend: "Отправить в сеть ✈️", finK: "Финальный секрет (K)", subFin: "Подстановка для Финала", btnCheck: "Проверить ключ 🔐",
     winLvl: "Уровень пройден!", btnNextLvl: "К следующему уровню ➔",
-    formDTitle: "Мини-опрос перед сертификацией", fLabel: "ФИО (как в паспорте)", aLabel: "Возраст", dobLabel: "Дата Рождения", sLabel: "Где учитесь? (или 'Нигде')", cLabel: "Страна",
-    sPlaceholder: "Напр: КазНУ", cPlaceholder: "Напр: Казахстан", btnGetCert: "Сгенерировать Сертификат 🎓",
-    online: "в сети", sending: "Отправляю пакет:", btnHome: "На главную",
+    formDTitle: "Мини-опрос перед сертификацией", fLabel: "ФИО (как в паспорте)", dobLabel: "Дата Рождения", sLabel: "Где учитесь? (или 'Нигде')", cLabel: "Страна",
+    sPlaceholder: "Напр: КазНУ", cPlaceholder: "Начните вводить страну...", cNotFound: "Такой страны не существует", btnGetCert: "Сгенерировать Сертификат 🎓",
+    online: "в сети", sending: "Отправляю пакет:", sendingI: "Отправляю промежуточный ключ (I):", btnHome: "На главную",
     certLangNames: { ru: "Russian", en: "English", kk: "Kazakh" },
     examDuration: "DURATION", quizResult: "THEORY SCORE",
     questions: [
@@ -41,13 +47,13 @@ const locales = {
     locked: "🔒 Locked", passed: "✅ Passed", getCertBtn: "Get certificate immediately (Cheat button 🤫)",
     qTitle: "Question", qOf: "of", qRes: "Result:", qPass: "Excellent! You proved your basic knowledge.", qFail: "You need at least 8 points. Review the theory!",
     btnRetry: "Try Again", setupTitle: "Network Setup", modP: "Modulus P", rootG: "Root G", btnNext: "Next", errP: "ERROR P",
-    secTitle: "Create your personal secret key", btnMem: "Remember", formTitle: "Choose the correct formula",
+    secTitle: "Create your personal private key", btnMem: "Remember", formTitle: "Choose the correct formula",
     subTitle: "Substitute values", base: "Base", exp: "Exponent", mod: "Modulus", ans: "Answer:", res: "Result",
     btnSend: "Send to network ✈️", finK: "Final Secret (K)", subFin: "Substitution for Final", btnCheck: "Check key 🔐",
     winLvl: "Level Passed!", btnNextLvl: "Next Level ➔",
-    formDTitle: "Mini-Survey Before Certification", fLabel: "Full Name (as in passport)", aLabel: "Age", dobLabel: "Date of Birth", sLabel: "Study Place? (or 'None')", cLabel: "Country",
-    sPlaceholder: "Ex: Stanf, School #1", cPlaceholder: "Ex: USA", btnGetCert: "Generate Certificate 🎓",
-    online: "online", sending: "Sending package:", btnHome: "Home",
+    formDTitle: "Mini-Survey Before Certification", fLabel: "Full Name (as in passport)", dobLabel: "Date of Birth", sLabel: "Study Place? (or 'None')", cLabel: "Country",
+    sPlaceholder: "Ex: Stanf, School #1", cPlaceholder: "Start typing country...", cNotFound: "Such country does not exist", btnGetCert: "Generate Certificate 🎓",
+    online: "online", sending: "Sending package:", sendingI: "Sending intermediate key (I):", btnHome: "Home",
     certLangNames: { ru: "Russian", en: "English", kk: "Kazakh" },
     examDuration: "DURATION", quizResult: "THEORY SCORE",
     questions: [
@@ -69,13 +75,13 @@ const locales = {
     locked: "🔒 Бұғатталған", passed: "✅ Өтілді", getCertBtn: "Сертификатты бірден алу (Құпия батырма 🤫)",
     qTitle: "Сұрақ", qOf: "/", qRes: "Нәтиже:", qPass: "Керемет! Сіз базалық біліміңізді дәлелдедіңіз.", qFail: "Кем дегенде 8 ұпай жинау керек. Теорияны қайталаңыз!",
     btnRetry: "Қайта тапсыру", setupTitle: "Желіні баптау", modP: "P модулі", rootG: "G түбірі", btnNext: "Келесі", errP: "ҚАТЕ P",
-    secTitle: "Өзіңіздің құпия кілтіңізді ойлап табыңыз", btnMem: "Есте сақтау", formTitle: "Дұрыс формуланы таңдаңыз",
+    secTitle: "Өзіңіздің жеке кілтіңізді ойлап табыңыз", btnMem: "Есте сақтау", formTitle: "Дұрыс формуланы таңдаңыз",
     subTitle: "Мәндерді қою", base: "Негіз", exp: "Дәреже", mod: "Модуль", ans: "Жауап:", res: "Нәтиже",
     btnSend: "Желіге жіберу ✈️", finK: "Финальды құпия (K)", subFin: "Финалға мәндерді қою", btnCheck: "Кілтті тексеру 🔐",
     winLvl: "Деңгей өтілді!", btnNextLvl: "Келесі деңгейге ➔",
-    formDTitle: "Сертификаттау алдындағы шағын сауалнама", fLabel: "Аты-жөніңіз (паспорт бойынша)", aLabel: "Жасы", dobLabel: "Туған күні", sLabel: "Қайда оқисыз? (немесе 'Еш жерде')", cLabel: "Елі",
-    sPlaceholder: "Напр: КазҰУ", cPlaceholder: "Напр: Казахстан", btnGetCert: "Сертификатты генерациялау 🎓",
-    online: "желіде", sending: "Пакетті жіберу:", btnHome: "Басты бетке",
+    formDTitle: "Сертификаттау алдындағы шағын сауалнама", fLabel: "Аты-жөніңіз (паспорт бойынша)", dobLabel: "Туған күні", sLabel: "Қайда оқисыз? (немесе 'Еш жерде')", cLabel: "Елі",
+    sPlaceholder: "Напр: КазҰУ", cPlaceholder: "Елді жаза бастаңыз...", cNotFound: "Мұндай ел жоқ", btnGetCert: "Сертификатты генерациялау 🎓",
+    online: "желіде", sending: "Пакетті жіберу:", sendingI: "Аралық кілтті жіберу (I):", btnHome: "Басты бетке",
     certLangNames: { ru: "Russian", en: "English", kk: "Kazakh" },
     examDuration: "DURATION", quizResult: "THEORY SCORE",
     questions: [
@@ -102,7 +108,7 @@ const transliterate = (text) => {
   return text.split('').map(c => map[c] || c).join('');
 };
 
-const TelegramAnimation = ({ sender, receiver, value, onComplete, isLight, d }) => {
+const TelegramAnimation = ({ sender, receiver, value, onComplete, isLight, d, msgText }) => {
   useEffect(() => {
     const timer = setTimeout(() => onComplete(), 4500);
     return () => clearTimeout(timer);
@@ -125,7 +131,7 @@ const TelegramAnimation = ({ sender, receiver, value, onComplete, isLight, d }) 
         <div className={`p-6 h-56 flex flex-col justify-end relative overflow-hidden ${chatBg}`} style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/cubes.png')" }}>
            <motion.div initial={{ scale: 0.5, opacity: 0, x: 20, y: 20 }} animate={{ scale: 1, opacity: 1, x: 0, y: 0 }} transition={{ type: "spring", delay: 0.5, bounce: 0.5 }} className={`self-end px-4 py-3 rounded-2xl rounded-tr-sm min-w-[60%] max-w-[85%] shadow-md relative z-10 ${msgBg}`}>
               <p className="mb-1 opacity-70 text-[10px] font-black uppercase tracking-wider">{sender}</p>
-              <span className="text-sm">{d.sending}</span> 
+              <span className="text-sm">{msgText || d.sending}</span>
               <strong className={`font-mono text-2xl block mt-1 ${isLight ? 'text-indigo-600' : 'text-amber-400'}`}>{value}</strong>
               <span className="text-[10px] opacity-50 ml-2 absolute bottom-2 right-3">12:00 ✓✓</span>
               <motion.div initial={{ x: 0, y: 0, scale: 0.5, opacity: 0, rotate: 0 }} animate={{ x: -350, y: -250, scale: 4, opacity: [0, 1, 1, 0], rotate: -25 }} transition={{ delay: 1.5, duration: 2.5, ease: "easeIn" }} className="absolute -top-4 -left-4 text-5xl drop-shadow-2xl z-50 pointer-events-none">✈️</motion.div>
@@ -182,7 +188,7 @@ const Certificate = ({ isLight, onBack, d, userData, quizScore, duration, submis
   const [pdfUrl, setPdfUrl] = useState(null);
   const [isGenerating, setIsGenerating] = useState(true);
   const [containerWidth, setContainerWidth] = useState(800);
-  const containerRef = React.useRef(null);
+  const containerRef = useRef(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -217,7 +223,7 @@ const Certificate = ({ isLight, onBack, d, userData, quizScore, duration, submis
         drawCentered('CERTIFICATE OF ACCOMPLISHMENT', 450, timesBold, 36, rgb(0.12, 0.11, 0.29));
         drawCentered('DIFFIE-HELLMAN CRYPTOSYSTEM FUNDAMENTALS', 415, helvetica, 14, rgb(0.28, 0.33, 0.41));
         drawCentered('This is to certify that', 360, timesRoman, 16, rgb(0.28, 0.33, 0.41));
-        
+
         const safeName = transliterate(userData?.fullName || "Student Name");
         drawCentered(safeName, 300, timesBold, 48, rgb(0.01, 0.02, 0.09));
 
@@ -237,11 +243,10 @@ const Certificate = ({ isLight, onBack, d, userData, quizScore, duration, submis
         page.drawText('EXAM LANGUAGE', { x: 580, y: 125, size: 9, font: helveticaBold, color: rgb(0.39, 0.45, 0.54) });
         page.drawText(locales[submissionLang]?.certLangNames[submissionLang] || "English", { x: 580, y: 105, size: 14, font: helveticaBold, color: rgb(0.06, 0.09, 0.16) });
 
-        const safeAge = transliterate(userData?.age || "--");
         const safeDob = transliterate(userData?.dob || "--");
         const safeStudy = transliterate(userData?.studyPlace || "--");
         const safeCountry = transliterate(userData?.country || "--");
-        const profile = `Profile: Age ${safeAge}, DoB ${safeDob}, Study at ${safeStudy}, from ${safeCountry}.`;
+        const profile = `Profile: DoB ${safeDob}, Study at ${safeStudy}, from ${safeCountry}.`;
         drawCentered(profile, 85, helvetica, 8, rgb(0.6, 0.65, 0.7));
 
         page.drawLine({ start: { x: 80, y: 70 }, end: { x: 280, y: 70 }, thickness: 1, color: rgb(0.12, 0.11, 0.29) });
@@ -254,12 +259,19 @@ const Certificate = ({ isLight, onBack, d, userData, quizScore, duration, submis
         page.drawText('Chief Cryptographer, Nurkot Inc.', { x: 661.89 - (helvetica.widthOfTextAtSize('Chief Cryptographer, Nurkot Inc.', 9)/2), y: 42, size: 9, font: helvetica, color: rgb(0.39, 0.45, 0.54) });
         page.drawText('K. Nurbek', { x: 661.89 - (timesItalic.widthOfTextAtSize('K. Nurbek', 26)/2), y: 78, size: 26, font: timesItalic, color: rgb(0.1, 0.1, 0.5) });
 
-        page.drawCircle({ x: 740, y: 100, radius: 25, borderColor: rgb(0.62, 0.07, 0.22), borderWidth: 2 });
-        page.drawCircle({ x: 740, y: 100, radius: 22, borderColor: rgb(0.62, 0.07, 0.22), borderWidth: 0.5 });
-        page.drawText('NURKOT INC.', { x: 722, y: 110, size: 6, font: helveticaBold, color: rgb(0.62, 0.07, 0.22), rotate: { angle: -10, type: 'degrees' } });
-        page.drawText('CORPORATION', { x: 718, y: 103, size: 5, font: helveticaBold, color: rgb(0.62, 0.07, 0.22), rotate: { angle: -10, type: 'degrees' } });
-        page.drawText('N', { x: 733, y: 92, size: 20, font: timesBold, color: rgb(0.62, 0.07, 0.22), rotate: { angle: -10, type: 'degrees' } });
-        page.drawText('APPROVED', { x: 725, y: 88, size: 4, font: helveticaBold, color: rgb(0.62, 0.07, 0.22), rotate: { angle: -10, type: 'degrees' } });
+        const sX = 735;
+        const sY = 95;
+        const sColor = rgb(0.62, 0.07, 0.22);
+
+        page.drawCircle({ x: sX, y: sY, size: 32, borderColor: sColor, borderWidth: 2 });
+        page.drawCircle({ x: sX, y: sY, size: 28, borderColor: sColor, borderWidth: 0.5 });
+        page.drawCircle({ x: sX, y: sY, size: 25, borderColor: sColor, borderWidth: 0.8, borderDashArray: [4, 2] });
+
+        page.drawText('NURKOT INC.', { x: 715, y: 108, size: 7, font: helveticaBold, color: sColor, rotate: { angle: -15, type: 'degrees' } });
+        page.drawLine({ start: { x: 710, y: 104 }, end: { x: 755, y: 92 }, thickness: 0.5, color: sColor });
+        page.drawText('CORPORATION', { x: 713, y: 97, size: 5, font: helveticaBold, color: sColor, rotate: { angle: -15, type: 'degrees' } });
+        page.drawText('N', { x: 725, y: 84, size: 30, font: timesBold, color: sColor, rotate: { angle: -15, type: 'degrees' } });
+        page.drawText('APPROVED', { x: 722, y: 73, size: 5, font: helveticaBold, color: sColor, rotate: { angle: -15, type: 'degrees' } });
 
         const pdfBytes = await pdfDoc.save();
         const blob = new Blob([pdfBytes], { type: 'application/pdf' });
@@ -298,6 +310,7 @@ const Certificate = ({ isLight, onBack, d, userData, quizScore, duration, submis
     </div>
   );
 };
+
 const ExamEngine = ({ mode, onComplete, isLight, t, d }) => {
   const [step, setStep] = useState(0);
   const [p, setP] = useState("23"); const [g, setG] = useState("5");
@@ -317,12 +330,12 @@ const ExamEngine = ({ mode, onComplete, isLight, t, d }) => {
 
   const showError = (msg) => { setError(msg); setTimeout(() => setError(""), 3500); };
 
+  // Активный пользователь для отображения секретов (Прячем чужие секреты на финальном этапе расчета Алисы)
   let activeUser = 'ALL';
-  if (step >= 1 && step <= 4) activeUser = 'A'; 
-  if (step >= 5 && step <= 8) activeUser = 'B'; 
-  if (mode === 3 && step >= 9 && step <= 12) activeUser = 'C'; 
-  if (step === 16 && mode === 2) activeUser = 'A'; 
-  if (step === 16 && mode === 3) activeUser = 'A'; 
+  if (step >= 1 && step <= 4) activeUser = 'A';
+  if (step >= 5 && step <= 8) activeUser = 'B';
+  if (mode === 3 && step >= 9 && step <= 12) activeUser = 'C';
+  if (step >= 13) activeUser = 'A'; // Алиса получает промежуточный ключ и считает финал
 
   const handleSetup = () => {
     if (!p || !isPrime(p)) return showError("P должно быть простым числом!");
@@ -342,7 +355,7 @@ const ExamEngine = ({ mode, onComplete, isLight, t, d }) => {
 
   const handleFormulaSelect = (opt) => {
     if (!opt.correct) return showError("Неверная формула! Подумайте еще.");
-    setSubBase(""); setSubExp(""); setSubMod(""); setCalcRes(""); 
+    setSubBase(""); setSubExp(""); setSubMod(""); setCalcRes("");
     setStep(prev => prev + 1);
   };
 
@@ -363,6 +376,10 @@ const ExamEngine = ({ mode, onComplete, isLight, t, d }) => {
           {(activeUser === 'A' || step > 12) && secrets.A && <div className={`px-4 py-1.5 rounded-lg font-mono font-bold text-sm bg-cyan-100 text-cyan-800`}>a = {secrets.A}</div>}
           {(activeUser === 'B') && secrets.B && <div className={`px-4 py-1.5 rounded-lg font-mono font-bold text-sm bg-rose-100 text-rose-800`}>b = {secrets.B}</div>}
           {(activeUser === 'C') && secrets.C && <div className={`px-4 py-1.5 rounded-lg font-mono font-bold text-sm bg-violet-100 text-violet-800`}>c = {secrets.C}</div>}
+
+          {/* Показываем Публичные/Промежуточные ключи для подстановки на финале */}
+          {step >= 16 && mode === 2 && secrets.B && <div className={`px-4 py-1.5 rounded-lg font-mono font-bold text-sm bg-indigo-100 text-indigo-800`}>B = {powerMod(g, secrets.B, p)}</div>}
+          {step >= 14 && mode === 3 && secrets.B && secrets.C && <div className={`px-4 py-1.5 rounded-lg font-mono font-bold text-sm bg-fuchsia-100 text-fuchsia-800`}>I = {powerMod(powerMod(g, secrets.B, p), secrets.C, p)}</div>}
         </div>
       )}
 
@@ -404,16 +421,23 @@ const ExamEngine = ({ mode, onComplete, isLight, t, d }) => {
       {[3, 7, 11, 17].includes(step) && (() => {
         let expectedBase = g, expectedExp = step===3?secrets.A:(step===7?secrets.B:secrets.C);
         let expectedRes = powerMod(g, expectedExp, p);
+
         if (step === 17) {
-            expectedBase = powerMod(g, secrets.B, p); expectedExp = secrets.A; expectedRes = powerMod(expectedBase, expectedExp, p);
-            if (mode === 3) { expectedBase = powerMod(powerMod(g, secrets.B, p), secrets.C, p); expectedExp = secrets.A; expectedRes = powerMod(expectedBase, expectedExp, p); }
+            if (mode === 2) {
+                expectedBase = powerMod(g, secrets.B, p); // Алиса берет B
+            } else if (mode === 3) {
+                expectedBase = powerMod(powerMod(g, secrets.B, p), secrets.C, p); // Алиса берет I
+            }
+            expectedExp = secrets.A; // Умножает на свою степень
+            expectedRes = powerMod(expectedBase, expectedExp, p);
         }
+
         return (
           <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="flex flex-col items-center w-full">
             <h3 className={`text-3xl font-bold mb-8 ${t.title}`}>{step === 17 ? d.subFin : d.subTitle}</h3>
             <div className={`p-6 rounded-3xl flex flex-wrap items-center justify-center gap-4 w-full max-w-3xl mb-10 border ${t.card}`}>
               <span className={`text-4xl font-black mr-2 ${isLight?'text-slate-800':'text-white'}`}>{step===17?'K':(step===3?'A':(step===7?'B':'C'))} =</span>
-              <input type="number" placeholder={d.base} value={subBase} onChange={e=>setSubBase(e.target.value)} className={`w-32 p-3 text-center text-2xl font-bold rounded-2xl border ${t.input}`}/>
+              <input type="number" placeholder={step===17?(mode===3?"I":"B"):d.base} value={subBase} onChange={e=>setSubBase(e.target.value)} className={`w-32 p-3 text-center text-2xl font-bold rounded-2xl border ${t.input}`}/>
               <span className={`text-3xl font-black ${t.text}`}>^</span>
               <input type="number" placeholder={d.exp} value={subExp} onChange={e=>setSubExp(e.target.value)} className={`w-32 p-3 text-center text-2xl font-bold rounded-2xl border ${t.input}`}/>
               <span className={`text-3xl font-black ${t.text}`}>mod</span>
@@ -428,9 +452,26 @@ const ExamEngine = ({ mode, onComplete, isLight, t, d }) => {
         );
       })()}
 
-      {step === 4 && <TelegramAnimation sender="Алиса👩🎓" receiver="Всем👥" value={powerMod(g, secrets.A, p)} onComplete={() => setStep(5)} isLight={isLight} d={d} />}
-      {step === 8 && <TelegramAnimation sender="Боб👨🎓" receiver="Всем👥" value={powerMod(g, secrets.B, p)} onComplete={() => { if(mode===2){ setFormulas([{text:"K = B^a mod p", correct:true}]); setStep(16); } else setStep(9); }} isLight={isLight} d={d} />}
-      {step === 12 && <TelegramAnimation sender="Кэрол👩🎓" receiver="Всем👥" value={powerMod(g, secrets.C, p)} onComplete={() => { setFormulas([{text:"K = (g^bc)^a mod p", correct:true}]); setStep(16); }} isLight={isLight} d={d} />}
+      {step === 4 && <TelegramAnimation sender="Алиса👩🎓" receiver="Боб👨🎓" value={powerMod(g, secrets.A, p)} onComplete={() => setStep(5)} isLight={isLight} d={d} />}
+
+      {step === 8 && <TelegramAnimation sender="Боб👨🎓" receiver="Кэрол👩🎓" value={powerMod(g, secrets.B, p)} onComplete={() => {
+        if(mode===2){
+          setFormulas([{text:"K = B^a mod p", correct:true}, {text:"K = B^b mod p", correct:false}].sort(()=>Math.random()-0.5));
+          setStep(16);
+        } else setStep(9);
+      }} isLight={isLight} d={d} />}
+
+      {step === 12 && <TelegramAnimation sender="Кэрол👩🎓" receiver="Алиса👩🎓" value={powerMod(g, secrets.C, p)} onComplete={() => { setStep(13); }} isLight={isLight} d={d} />}
+
+      {/* Промежуточный этап для 3 участников */}
+      {step === 13 && <TelegramAnimation sender="Кэрол👩🎓" receiver="Алиса👩🎓" msgText={d.sendingI} value={powerMod(powerMod(g, secrets.B, p), secrets.C, p)} onComplete={() => {
+          setFormulas([
+            {text:"K = I^a mod p", correct:true},
+            {text:"K = I^b mod p", correct:false},
+            {text:"K = a^I mod p", correct:false}
+          ].sort(() => Math.random() - 0.5));
+          setStep(16);
+      }} isLight={isLight} d={d} />}
 
       {step === 18 && (
         <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex flex-col items-center text-center py-10 w-full">
@@ -444,19 +485,76 @@ const ExamEngine = ({ mode, onComplete, isLight, t, d }) => {
 };
 
 const UserDataForm = ({ isLight, d, t, onSubmit }) => {
-  const [data, setData] = useState({ fullName: "", age: "", dob: "", studyPlace: "", country: "" });
+  const [data, setData] = useState({ fullName: "", dob: "", studyPlace: "", country: "" });
+  const [filteredCountries, setFilteredCountries] = useState([]);
+  const [showList, setShowList] = useState(false);
+  const [countryErr, setCountryErr] = useState("");
+
   const handleChange = (e) => setData({ ...data, [e.target.name]: e.target.value });
-  const handleSubmit = (e) => { e.preventDefault(); onSubmit(data); };
+
+  const handleCountryChange = (e) => {
+    const val = e.target.value;
+    setData({ ...data, country: val });
+    setCountryErr("");
+    if (val.trim().length > 0) {
+      const filtered = COUNTRIES.filter(c => c.toLowerCase().includes(val.toLowerCase()));
+      setFilteredCountries(filtered);
+      setShowList(true);
+    } else {
+      setShowList(false);
+    }
+  };
+
+  const selectCountry = (c) => {
+    setData({ ...data, country: c });
+    setShowList(false);
+    setCountryErr("");
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const exactCountry = COUNTRIES.find(c => c.toLowerCase() === data.country.toLowerCase());
+    if (!exactCountry) {
+      setCountryErr(d.cNotFound);
+      return;
+    }
+    onSubmit({ ...data, country: exactCountry });
+  };
 
   return (
     <motion.form initial={{ opacity: 0 }} animate={{ opacity: 1 }} onSubmit={handleSubmit} className="flex flex-col items-center py-10 w-full max-w-3xl mx-auto">
       <h3 className={`text-4xl font-black mb-10 ${t.title}`}>{d.formDTitle}</h3>
       <div className="grid grid-cols-2 gap-6 w-full mb-10">
-        <div className="col-span-2"><label className={`block text-xs font-bold uppercase mb-2 ${t.text}`}>{d.fLabel}</label><input required name="fullName" value={data.fullName} onChange={handleChange} className={`w-full p-4 rounded-xl border ${t.input}`}/></div>
-        <div><label className={`block text-xs font-bold uppercase mb-2 ${t.text}`}>{d.aLabel}</label><input required type="number" name="age" value={data.age} onChange={handleChange} className={`w-full p-4 rounded-xl border ${t.input}`}/></div>
-        <div><label className={`block text-xs font-bold uppercase mb-2 ${t.text}`}>{d.dobLabel}</label><input required type="date" name="dob" value={data.dob} onChange={handleChange} className={`w-full p-4 rounded-xl border ${t.input}`}/></div>
-        <div><label className={`block text-xs font-bold uppercase mb-2 ${t.text}`}>{d.sLabel}</label><input required name="studyPlace" value={data.studyPlace} onChange={handleChange} placeholder={d.sPlaceholder} className={`w-full p-4 rounded-xl border ${t.input}`}/></div>
-        <div><label className={`block text-xs font-bold uppercase mb-2 ${t.text}`}>{d.cLabel}</label><input required name="country" value={data.country} onChange={handleChange} placeholder={d.cPlaceholder} className={`w-full p-4 rounded-xl border ${t.input}`}/></div>
+        <div className="col-span-2">
+          <label className={`block text-xs font-bold uppercase mb-2 ${t.text}`}>{d.fLabel}</label>
+          <input required name="fullName" value={data.fullName} onChange={handleChange} className={`w-full p-4 rounded-xl border ${t.input}`}/>
+        </div>
+        <div className="col-span-1">
+          <label className={`block text-xs font-bold uppercase mb-2 ${t.text}`}>{d.dobLabel}</label>
+          <input required type="date" name="dob" value={data.dob} onChange={handleChange} className={`w-full p-4 rounded-xl border ${t.input}`}/>
+        </div>
+        <div className="col-span-1 relative">
+          <label className={`block text-xs font-bold uppercase mb-2 ${t.text}`}>{d.cLabel}</label>
+          <input
+            required autoComplete="off" name="country" value={data.country}
+            onChange={handleCountryChange} onFocus={() => { if(data.country) handleCountryChange({target: {value: data.country}}) }} onBlur={() => setTimeout(() => setShowList(false), 200)}
+            placeholder={d.cPlaceholder} className={`w-full p-4 rounded-xl border ${t.input} ${countryErr ? 'border-rose-500' : ''}`}
+          />
+          {countryErr && <span className="text-rose-500 text-xs font-bold mt-1 block">{countryErr}</span>}
+          <AnimatePresence>
+            {showList && filteredCountries.length > 0 && (
+              <motion.ul initial={{opacity:0, y:-10}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-10}} className={`absolute left-0 right-0 top-[85px] max-h-48 overflow-y-auto rounded-xl shadow-2xl z-50 border ${isLight ? 'bg-white border-slate-200' : 'bg-slate-800 border-slate-700'}`}>
+                {filteredCountries.map(c => (
+                  <li key={c} onClick={() => selectCountry(c)} className={`p-3 cursor-pointer hover:bg-indigo-500 hover:text-white transition-colors ${isLight?'text-slate-800':'text-slate-200'}`}>{c}</li>
+                ))}
+              </motion.ul>
+            )}
+          </AnimatePresence>
+        </div>
+        <div className="col-span-2">
+          <label className={`block text-xs font-bold uppercase mb-2 ${t.text}`}>{d.sLabel}</label>
+          <input required name="studyPlace" value={data.studyPlace} onChange={handleChange} placeholder={d.sPlaceholder} className={`w-full p-4 rounded-xl border ${t.input}`}/>
+        </div>
       </div>
       <button type="submit" className={`px-12 py-4 rounded-2xl font-bold text-xl ${t.btn}`}>{d.btnGetCert}</button>
     </motion.form>
@@ -477,6 +575,8 @@ export const ExamSection = ({ isLight, lang }) => {
     bg: isLight ? 'bg-white border-slate-200 shadow-xl' : 'bg-[#172033]/90 backdrop-blur-md border-indigo-500/30 shadow-[0_0_40px_rgba(99,102,241,0.15)]',
     text: isLight ? 'text-slate-700' : 'text-slate-300',
     title: isLight ? 'text-slate-900' : 'text-white',
+    input: isLight ? 'bg-slate-50 border-slate-300 focus:border-indigo-500' : 'bg-[#0f172a] border-slate-700 focus:border-indigo-500 text-white',
+    card: isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-800',
     btn: isLight ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-[0_0_15px_rgba(79,70,229,0.3)]',
   };
 
@@ -521,7 +621,6 @@ export const ExamSection = ({ isLight, lang }) => {
   return (
     <div className="w-full flex justify-center items-center min-h-[75vh] pb-20 pt-4">
       <div className={`w-full max-w-5xl p-6 md:p-10 rounded-[2.5rem] border relative overflow-visible ${t.bg}`}>
-        
         {(level === 1 || level === 2 || level === 3) && (
           <div className="absolute top-0 left-0 h-2 bg-indigo-500/10 w-full rounded-t-[2.5rem] overflow-hidden">
             <motion.div className="h-full bg-indigo-500" initial={{ width: 0 }} animate={{ width: level === 1 ? '33%' : (level === 2 ? '66%' : '100%') }} transition={{ duration: 0.5 }} />
@@ -545,7 +644,6 @@ export const ExamSection = ({ isLight, lang }) => {
         {level === 3 && <ExamEngine mode={3} onComplete={() => handlePracticeComplete(3, 4)} isLight={isLight} t={t} d={d} />}
         {level === 4 && <UserDataForm isLight={isLight} d={d} t={t} onSubmit={handleDataFormSubmit} />}
         {level === 5 && <Certificate isLight={isLight} onBack={() => setLevel(0)} d={d} userData={userData} quizScore={quizScore} duration={examDuration} submissionLang={lang} />}
-        
       </div>
     </div>
   );
